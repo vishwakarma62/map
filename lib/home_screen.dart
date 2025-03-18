@@ -16,10 +16,13 @@ class _LiveAnimatedMarkersState extends State<LiveAnimatedMarkers>
   late final MapController _mapController;
   late final AnimationController _movementController;
   late final AnimationController _pulseController;
+  late final AnimationController _rotationController;
   late Timer _timer;
 
   LatLng _currentPosition = const LatLng(51.5, -0.09);
+  double _currentAngle = 0; // Initial angle
   LatLng? _targetPosition;
+  double? _targetAngle;
 
   @override
   void initState() {
@@ -36,25 +39,34 @@ class _LiveAnimatedMarkersState extends State<LiveAnimatedMarkers>
       vsync: this,
     );
 
+    _rotationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
     // Start generating random positions at regular intervals
     _timer = Timer.periodic(const Duration(seconds: 3), (_) {
       _generateRandomPosition();
     });
   }
 
-  /// Simulate API call by generating random positions
+  /// Simulate API call by generating random positions and angles
   void _generateRandomPosition() {
     final random = Random();
+
     final newPosition = LatLng(
       _currentPosition.latitude + (random.nextDouble() * 0.02 - 0.01),
       _currentPosition.longitude + (random.nextDouble() * 0.02 - 0.01),
     );
 
-    _startPositionAnimation(newPosition);
+    final newAngle = random.nextDouble() * 360; // Angle between 0 and 360
+
+    _startPositionAnimation(newPosition, newAngle);
   }
 
-  void _startPositionAnimation(LatLng newPosition) {
-    final animation = LatLngTween(
+  void _startPositionAnimation(LatLng newPosition, double newAngle) {
+    // Animate position
+    final positionAnimation = LatLngTween(
       begin: _currentPosition,
       end: newPosition,
     ).animate(CurvedAnimation(
@@ -62,12 +74,33 @@ class _LiveAnimatedMarkersState extends State<LiveAnimatedMarkers>
       curve: Curves.easeInOut,
     ));
 
-    animation.addListener(() {
-      setState(() => _currentPosition = animation.value);
-      _mapController.move(animation.value, _mapController.camera.zoom);
+    positionAnimation.addListener(() {
+      setState(() {
+        _currentPosition = positionAnimation.value;
+      });
+      _mapController.move(positionAnimation.value, _mapController.camera.zoom);
+    });
+
+    // Animate angle rotation
+    final rotationAnimation = Tween<double>(
+      begin: _currentAngle,
+      end: newAngle,
+    ).animate(CurvedAnimation(
+      parent: _rotationController,
+      curve: Curves.easeInOut,
+    ));
+
+    rotationAnimation.addListener(() {
+      setState(() {
+        _currentAngle = rotationAnimation.value;
+      });
     });
 
     _movementController
+      ..reset()
+      ..forward();
+
+    _rotationController
       ..reset()
       ..forward();
   }
@@ -77,6 +110,7 @@ class _LiveAnimatedMarkersState extends State<LiveAnimatedMarkers>
     _timer.cancel();
     _movementController.dispose();
     _pulseController.dispose();
+    _rotationController.dispose();
     super.dispose();
   }
 
@@ -102,6 +136,7 @@ class _LiveAnimatedMarkersState extends State<LiveAnimatedMarkers>
               point: _currentPosition,
               child: _AnimatedMarker(
                 pulseController: _pulseController,
+                angle: _currentAngle, // Pass angle to marker
               ),
             ),
           ],
@@ -113,23 +148,30 @@ class _LiveAnimatedMarkersState extends State<LiveAnimatedMarkers>
 
 class _AnimatedMarker extends StatelessWidget {
   final AnimationController pulseController;
+  final double angle;
 
-  const _AnimatedMarker({required this.pulseController});
+  const _AnimatedMarker({
+    required this.pulseController,
+    required this.angle,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: Tween(begin: 0.7, end: 1.0).animate(
-        CurvedAnimation(
-          parent: pulseController,
-          curve: Curves.easeInOut,
+    return Transform.rotate(
+      angle: angle * (pi / 180), // Convert degrees to radians
+      child: ScaleTransition(
+        scale: Tween(begin: 0.7, end: 1.0).animate(
+          CurvedAnimation(
+            parent: pulseController,
+            curve: Curves.easeInOut,
+          ),
         ),
-      ),
-      child: const Icon(
-        Icons.location_pin,
-        size: 50,
-        color: Colors.red,
-        shadows: [Shadow(blurRadius: 4)],
+        child: const Icon(
+          Icons.navigation, // Use a directional icon
+          size: 50,
+          color: Colors.red,
+          shadows: [Shadow(blurRadius: 4)],
+        ),
       ),
     );
   }
