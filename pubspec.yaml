@@ -1,0 +1,28 @@
+name: map
+description: "A real-time vehicle tracking application"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.6.1 <4.0.0'  # More precise version constraint
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_map: ^6.0.0+1    # Latest flutter_map
+  latlong2: ^0.9.1         # For LatLng coordinates
+  http: ^1.2.0             # Missing HTTP client
+  cupertino_icons: ^1.0.8
+  flutter_map_animated_marker: 
+  flutter_map_animations: ^0.6.0
+  geolocator: ^13.0.2
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
